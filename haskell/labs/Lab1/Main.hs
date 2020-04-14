@@ -1,3 +1,5 @@
+-- Author: Alexander Mennborg
+
 import System.IO
 
 -- For convenience we define sub list type which is defined by (i, j) tuple.
@@ -121,7 +123,9 @@ calcSmallestKSets list k =
 
 -- Entry point performs computation and prints results.
 smallestKSets :: (Ord t, Show t, Num t) => [t] -> Int -> IO ()
-smallestKSets list k = putStr (calcSmallestKSets list k)
+smallestKSets list k
+  | length list > 0 = putStr (calcSmallestKSets list k)
+  | otherwise       = error "Smallest K sets does not accept an empty list."
 
 
 runTestCases :: IO ()
