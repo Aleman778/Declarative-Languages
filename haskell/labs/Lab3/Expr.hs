@@ -1,4 +1,10 @@
+-- Modified by: Alexander Mennborg
+
+
 module Expr(Expr, T, parse, fromString, value, toString) where
+import Prelude hiding (return, fail)
+import Parser hiding (T)
+import qualified Dictionary
 
 {-
    An expression of type Expr is a representation of an arithmetic expression 
@@ -23,9 +29,6 @@ module Expr(Expr, T, parse, fromString, value, toString) where
    value e env evaluates e in an environment env that is represented by a
    Dictionary.T Int.  
 -}
-import Prelude hiding (return, fail)
-import Parser hiding (T)
-import qualified Dictionary
 
 data Expr = Num Integer | Var String | Add Expr Expr 
        | Sub Expr Expr | Mul Expr Expr | Div Expr Expr
@@ -70,8 +73,20 @@ shw prec (Sub t u) = parens (prec>5) (shw 5 t ++ "-" ++ shw 6 u)
 shw prec (Mul t u) = parens (prec>6) (shw 6 t ++ "*" ++ shw 6 u)
 shw prec (Div t u) = parens (prec>6) (shw 6 t ++ "/" ++ shw 7 u)
 
+
+-- Exercise Part 2 a. -- 
 value :: Expr -> Dictionary.T String Integer -> Integer
-value (Num n) _ = error "value not implemented"
+value (Num n) _ = n
+value (Var n) d = case Dictionary.lookup n d of
+  Just v -> v
+  Nothing -> error ("variable `" ++ n ++ "` is not defined")
+value (Add a b) d = (value a d) + (value b d)
+value (Sub a b) d = (value a d) - (value b d)
+value (Mul a b) d = (value a d) * (value b d)
+value (Div a b) d = case (value b d) of
+  0 -> error "division by zero" 
+  denominator -> (value a d) `div` denominator
+
 
 instance Parse Expr where
     parse = expr

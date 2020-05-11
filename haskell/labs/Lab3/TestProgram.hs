@@ -1,3 +1,6 @@
+-- Modified by: Alexander Mennborg
+
+
 {- Test for Program -}
 module TestProgram where
 
@@ -38,3 +41,33 @@ sp = putStr (toString p)
 rp = Program.exec p [3,16]
 
 rp1 = Program.exec p1 [1024, 2]
+
+pr :: Program.T
+pr = fromString ("\
+\read k;\
+\write k;\
+\repeat\
+\ begin\
+\ k := k + 1;\
+\ write k;\
+\ end\
+\until k;")
+
+spr = putStr (toString pr)
+rpr k = Program.exec pr [k]
+
+
+pr2 :: Program.T
+pr2 = fromString("\
+\read n;\
+\s:=0;\
+\repeat\
+\begin\
+\s:=s+n;\
+\n:=n-1;\
+\end\
+\until (0-n)+1;\
+\write s;")
+
+spr2 = putStr (toString pr2)
+rpr2 n = Program.exec pr2 [n]

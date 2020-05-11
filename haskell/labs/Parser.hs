@@ -61,73 +61,7 @@ require :: String -> Parser String
 require w = (accept w) ! (err ("expected `" ++ w ++ "`"))
 
 (-#) :: Parser a -> Parser b -> Parser b
-m -# n = m # n >-> snd
+m -# n = m # n >->snd
 
 (#-) :: Parser a -> Parser b -> Parser a
 m #- n = m # n >-> fst
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
--- Other from attached paper
--- Exercise 1
-semicolon1 :: Parser Char
-semicolon1 = char ? (== ';')
-
--- Exercise 2
-becomes1 :: Parser String
-becomes1 = (chars 2) ? (== ":=")
-
--- Exercise 3
-char1 :: Parser Char
-char1 [] = Nothing
-char1 (c:cx) = Just(c, cx)
-
--- Exercise 4
-
-
--- Exercise 5
-alphanum :: Parser Char
-alphanum = letter ! digit
-
--- Exercise 6
-semicolon :: Parser Char
-semicolon = lit ':'
-
--- Exercise 7
-twochars :: Parser (Char, Char)
-twochars = char # char
-
-becomes :: Parser (Char, Char)
-becomes = twochars ? (== (':', '='))
-
--- Exercise 8
-upcase :: Parser Char
-upcase = letter >-> toUpper
-
--- Exercise 9
-
--- Exercise 10
-
--- Exercise 11
-
--- Exercise 12
-
--- Exercise 13
-
--- Exercise 14
--- Exercise 15
-
