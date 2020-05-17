@@ -2,25 +2,40 @@
 
 
 % Structure: sublist(Sublist: [t], Size: Int, I: Int, J; Int)
+create_sublist(List, I, SubList) :- 
+    length(List, Len), size(List, Size), J is I + Len,
+    SubList = sublist(List, Size, I, J).
 
 
-% Creates all possible combinations of sublists using the given list.
-create_sublists(L1, L2) :-
-    length(L1, Len), Len2 is Len + 1,
-    findall((I, J), (between(1, Len2, I), between(1, Len2, J), I =< J), Indices),
-    list_to_set(Indices, Indices2),
-    create_sublists(L1, Indices2, L2).
-create_sublists(_, [], []).
-create_sublists(L, [(I, J)| Indices], [sublist(L2, Size, I, J)| Xs]) :-
-    findall(X, (between(I, J, K), nth1(K, L, X)), L2),
-    size(L2, Size),
-    create_sublists(L, Indices, Xs), !.
+sublist_equals([], []).
+sublist_equals([X|Xs], [Y|Ys]) :-
+    X == Y,
+    sublist_equals(Xs, Ys), !.
+
+sublist_equals(sublist(Xs, _, Xi, Xj), sublist(Ys, _, Yi, Yj)) :-
+    Xj - Xi == Yj - Yi,
+    sublist_equals(Xs, Ys).
+
+
+not_in_set(_, []) :- true, !.
+not_in_set(X, [Y|Ys]) :-
+    not(sublist_equals(X, Y)),
+    not_in_set(X, Ys), !.
 
 
 % Size is defined as the sum of all elements in a list or sublist.
 size(List, Size) :-
     sum_list(List, Size).
 size(sublist(_, Size, _, _), Size).
+
+
+% Returns a list of last indices of sublists, and also to get them unique use that procedure instead.
+get_last_indices([], []).
+get_last_indices([sublist(_, _, _, J)|Xs], [J|Ys]) :-
+    get_last_indices(Xs, Ys).
+get_last_unique_indices(Xs, Ys) :-
+    get_last_indices(Xs, XsInt),
+    list_to_set(XsInt, Ys).
     
 
 % Compares two sublists and determines the smallest one first by size and then by length.
@@ -28,34 +43,73 @@ size(sublist(_, Size, _, _), Size).
 compare(sublist(_, SizeX, Xi, Xj), sublist(_, SizeY, Yi, Yj)) :-
     SizeX < SizeY -> true, !;
     SizeX > SizeY -> false, !;
-    Xi > Yi, Xj > Yj, !.
- 
+    LenX is Xj - Xi, LenY is Yj - Yi, LenX =< LenY, !.
 
-% Merge sort implementation.
-merge_sprt([], []).
-merge_sort([X], [X]).
-merge_sort(L1, L2) :- 
-    split_list(L1, Xs, Ys),
-    merge_sort(Xs, Xs2),
-    merge_sort(Ys, Ys2),
-    merge_lists(Xs2, Ys2, L2).
+
+% Concatenates consecutive sublists from the given set of sublists, I know very confusing!
+% We essentially want to find all possible combinations of the current head element concatenated
+% with each sublist in our smallest k set, there may be the given scenario
+% SubList = [-3, 1, -2], Idx = 0, K = 1, Set = [[-2]], we want the set to be Set = [-3, 1, -2] but
+% there is a 1 in the way that we need to consider.
+append_consecutive(_, _, _, [], Set, Set).
+append_consecutive(List, Idx, K, [J | Js], Set, Set2) :-
+    J2 is J - Idx - 1,
+    findall(X, (nth0(I, List, X), I =< J2), Xs),
+    create_sublist(Xs, Idx, SubList),
+    append_k_smallest(SubList, Set, K, SetInt),
+    append_consecutive(List, Idx, K, Js, SetInt, Set2).
+
+append_consecutive_k_smallest(List, Idx, K, Set, Set2) :-
+    get_last_unique_indices(Set, Js),
+    append_consecutive(List, Idx, K, Js, Set, Set2).
+
+% Append to list while keeping items ordered and fixed size, k.
+append_k_smallest(X, L1, K, L2) :-
+    not_in_set(X, L1),
+    (length(L1, Len),
+    Len >= K,
+    append_smallest(X, L1, L3),
+    remove_last(L3, L2), !;
+    append_smallest(X, L1, L2), !); L2 = L1, !.
+
+
+% Appending a list of entries with smallest `size` in increasing order.
+append_smallest(X, [], [X]).
+
+append_smallest(X, [Y | L1], L2) :-
+    compare(X, Y),
+    append_smallest(Y, L1, Last), list_to_set([X|Last], L2), !;
+    append_smallest(X, L1, Last), list_to_set([Y|Last], L2), !.
     
 
-% Splits list L into two sublists Xs and Ys, used in merge sort.
-split_list(L, Xs, Ys) :-
-    append(Xs, Ys, L),
-    length(Xs, N1), length(Ys, N2),
-    N is N1 - N2, N >= 0, N =< 1, !.
+% Removes the last element in the list.
+remove_last([X|Xs], Ys) :-
+    remove_last_prev(Xs, Ys, X).
 
 
-% Merges two lists into one list, used in merge sort.
-merge_lists(Xs, [], Xs).
-merge_lists([], Ys, Ys).
-merge_lists([X|Xs], [Y|Ys], [Z|Zs]) :-
-    compare(X, Y),
-    Z = X, merge_lists(Xs, [Y|Ys], Zs), !;
-    Z = Y, merge_lists([X|Xs], Ys, Zs), !.
+% Intermediate step in removing the last element, 
+% we lag behind one element and insert previous element into Ys.
+remove_last_prev([], [], _).
+remove_last_prev([X1|Xs], [X0|Ys], X0) :-
+    remove_last_prev(Xs, Ys, X1).
 
+% In this case where we only have a single element we could try to insert either
+% a sublist containing that element or just an empty sublist.
+smallest_k_set(sublist([X | []], Size, I, J), K, Set, Set2) :- 
+    append_k_smallest(sublist([X], Size, I, J), Set, K, Set2).
+
+
+% In this case we can choose to include the head or not and recursively find the smallest k set on
+% the tail of the list.
+smallest_k_set(sublist([X | Xs], Size, I, J), K, Set, Set2) :-
+    SizeXs is Size - X,
+    I2 is I + 1,
+    XSubList = sublist([X], X, I, I2),
+    XsSubList = sublist(Xs, SizeXs, I2, J),
+    smallest_k_set(XsSubList, K, Set, SetInt),
+    append_consecutive_k_smallest([X | Xs], I, K, SetInt, SetInt2),
+    append_k_smallest(XSubList, SetInt2, K, Set2).
+    
 
 % If an empty list is provided then throw an error.
 smallest_k_set([], _, _) :- 
@@ -65,11 +119,8 @@ smallest_k_set([], _, _) :-
 % The starting call with a list of elements, integer K and 
 % result of sets containing k smallest sublists are stored in Set.
 smallest_k_set(List, K, Set) :- 
-    create_sublists(List, Set2),
-    merge_sort(Set2, Set3),
-    findall(X, (nth0(I, Set3, X), I < K), Set).
-
-
+    create_sublist(List, 0, SubList),
+    smallest_k_set(SubList, K, [], Set).
 
 %%
 %% Test cases from Haskel lab 1.
@@ -82,7 +133,7 @@ run_test_cases() :-
     write("\n\nTest case 2:\n-------------------------------------------------\n"),
     test_case_2(),
     write("\n\nTest case 3:\n-------------------------------------------------\n"),
-    test_case_3(), !.
+    test_case_3().
 
 
 test_case_1() :-
